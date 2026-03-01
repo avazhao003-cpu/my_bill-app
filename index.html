@@ -3,96 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>萌萌账单助手</title>
+    <title>萌萌账单 AI 版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 这里的逻辑是：如果没有超过均值，就是蓝色调（bg-blue-50），超过了就是橘色调（bg-orange-50） */
-        .theme-blue { --main-color: #3b82f6; --bg-light: #eff6ff; }
-        .theme-orange { --main-color: #f97316; --bg-light: #fff7ed; }
         body { transition: all 0.5s ease; font-family: 'Segoe UI', sans-serif; }
+        .loading { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
-<body class="bg-gray-100 flex h-screen">
+<body id="body-bg" class="bg-blue-50 flex h-screen">
 
-    <aside class="w-64 bg-white shadow-lg flex flex-col p-6">
-        <h1 class="text-2xl font-bold mb-10 flex items-center gap-2">
-            <span>💰</span> 萌账助手
-        </h1>
-        <nav class="space-y-4">
-            <a href="#" class="block p-3 rounded-lg bg-blue-100 text-blue-600 font-bold">📊 月度概览</a>
-            <a href="#" class="block p-3 rounded-lg text-gray-500 hover:bg-gray-50">📑 账单导入</a>
-            <a href="#" class="block p-3 rounded-lg text-gray-500 hover:bg-gray-50">⚙️ 消费设置</a>
-        </nav>
+    <aside class="w-72 bg-white shadow-xl flex flex-col p-6 border-r border-blue-100">
+        <div class="text-2xl font-bold mb-8 text-blue-600">🎨 萌账 AI 控制台</div>
+        
+        <div class="space-y-6">
+            <div>
+                <label class="text-xs text-gray-400 uppercase font-bold">1. 接入大脑</label>
+                <input type="password" id="api-key" placeholder="在此粘贴 DeepSeek Key" class="w-full mt-2 p-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none">
+            </div>
+
+            <div>
+                <label class="text-xs text-gray-400 uppercase font-bold">2. 设置警戒线</label>
+                <input type="number" id="budget-limit" value="3000" class="w-full mt-2 p-2 text-xl font-bold border-b-2 border-blue-200 outline-none">
+            </div>
+
+            <nav class="pt-6 space-y-2">
+                <button class="w-full text-left p-3 rounded-xl bg-blue-600 text-white shadow-lg">📊 账单分析</button>
+                <button onclick="location.reload()" class="w-full text-left p-3 rounded-xl hover:bg-gray-100">🔄 重置页面</button>
+            </nav>
+        </div>
     </aside>
 
-    <main id="main-content" class="flex-1 p-10 overflow-y-auto bg-blue-50">
-        <header class="mb-10">
-            <h2 class="text-gray-500 mb-2">本月总支出</h2>
-            <div class="flex items-end gap-4">
-                <span id="total-amount" class="text-5xl font-black text-blue-600">￥0.00</span>
-                <span id="status-tag" class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium mb-2">预算内，真棒！</span>
+    <main class="flex-1 p-10 overflow-y-auto">
+        <header id="header-card" class="bg-white p-8 rounded-3xl shadow-sm mb-8 border-b-8 border-blue-500">
+            <h2 class="text-gray-400">本月消费总计</h2>
+            <div class="flex items-center gap-6">
+                <span id="total-amount" class="text-6xl font-black text-blue-600">￥0.00</span>
+                <div id="ai-status" class="px-4 py-2 rounded-full bg-blue-100 text-blue-600 font-bold">待机中...</div>
             </div>
         </header>
 
-        <section class="bg-white p-6 rounded-2xl shadow-sm mb-10">
-            <h3 class="font-bold mb-4 text-gray-700">控制面板 (模拟测试)</h3>
-            <div class="flex gap-10">
-                <div>
-                    <label class="block text-sm text-gray-500">我的月度均值 (元)</label>
-                    <input type="number" id="limit-input" value="3000" class="border-b-2 border-gray-200 focus:border-blue-500 outline-none text-xl p-2">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <section class="bg-white p-6 rounded-3xl shadow-sm">
+                <h3 class="font-bold mb-4">📂 导入原始账单</h3>
+                <div id="drop-zone" class="border-4 border-dashed border-blue-100 rounded-2xl p-10 text-center hover:bg-blue-50 transition-all cursor-pointer">
+                    <p id="upload-text" class="text-gray-400">点击这里选择微信/支付宝 CSV 账单</p>
+                    <input type="file" id="file-input" class="hidden" accept=".csv">
                 </div>
-                <div>
-                    <label class="block text-sm text-gray-500">当前模拟支出 (元)</label>
-                    <input type="number" id="current-input" value="0" class="border-b-2 border-gray-200 focus:border-blue-500 outline-none text-xl p-2">
-                </div>
-            </div>
-        </section>
+            </section>
 
-        <div id="ai-bubble" class="bg-white p-4 rounded-2xl border-2 border-blue-400 relative mb-10">
-            <p class="text-lg">🤖 AI 助手说：<span id="ai-text">欢迎回来！快把账单丢给我分析吧～</span></p>
+            <section class="bg-white p-6 rounded-3xl shadow-sm">
+                <h3 class="font-bold mb-4">🧩 AI 分类结果</h3>
+                <div id="category-list" class="space-y-3">
+                    <p class="text-gray-300 italic text-sm">解析后将在此显示明细...</p>
+                </div>
+            </section>
+        </div>
+
+        <div id="ai-bubble" class="mt-8 bg-white p-6 rounded-3xl border-l-8 border-blue-500 shadow-md">
+            <p class="text-blue-500 font-bold mb-1">🤖 AI 助手深度点评：</p>
+            <p id="ai-comment" class="text-xl text-gray-700 italic">“准备好了吗？把账单丢进来，让我看看你的钱都去哪了。”</p>
         </div>
     </main>
 
     <script>
-        const limitInput = document.getElementById('limit-input');
-        const currentInput = document.getElementById('current-input');
-        const totalAmount = document.getElementById('total-amount');
-        const mainContent = document.getElementById('main-content');
-        const statusTag = document.getElementById('status-tag');
-        const aiText = document.getElementById('ai-text');
+        const fileInput = document.getElementById('file-input');
+        const dropZone = document.getElementById('drop-zone');
 
-        const badComments = [
-            "你的钱包正在哭泣，真的不打算停手吗？😭",
-            "警报！检测到碎钞机正在运行，请立刻撤离商场！🚨",
-            "再买就要吃土了，这土可不一定是蓝莓味的哦～🍨"
-        ];
+        // 点击虚线框触发文件选择
+        dropZone.onclick = () => fileInput.click();
 
-        function updateUI() {
-            const limit = parseFloat(limitInput.value);
-            const current = parseFloat(currentInput.value);
-            totalAmount.innerText = `￥${current.toFixed(2)}`;
+        fileInput.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
 
-            if (current > limit) {
-                // 切换为橘色警告风格
-                mainContent.classList.replace('bg-blue-50', 'bg-orange-50');
-                totalAmount.classList.replace('text-blue-600', 'text-orange-600');
-                statusTag.innerText = "超过均值了！";
-                statusTag.classList.replace('bg-blue-100', 'bg-orange-100');
-                statusTag.classList.replace('text-blue-600', 'text-orange-600');
-                aiText.innerText = badComments[Math.floor(Math.random() * badComments.length)];
-            } else {
-                // 保持蓝色简约风格
-                mainContent.classList.replace('bg-orange-50', 'bg-blue-50');
-                totalAmount.classList.replace('text-orange-600', 'text-blue-600');
-                statusTag.innerText = "预算内，真棒！";
-                statusTag.classList.replace('bg-orange-100', 'bg-blue-100');
-                statusTag.classList.replace('text-orange-600', 'text-blue-600');
-                aiText.innerText = "状态良好，继续保持这份理智！✨";
+            const apiKey = document.getElementById('api-key').value;
+            if (!apiKey) {
+                alert("请先在左侧输入 DeepSeek API Key！");
+                return;
+            }
+
+            document.getElementById('upload-text').innerText = "正在读取文件...";
+            document.getElementById('ai-status').innerText = "AI 正在思考...";
+            document.getElementById('ai-status').classList.add('loading');
+
+            // 1. 读取文本内容
+            const text = await file.text();
+            
+            // 2. 呼叫 DeepSeek
+            analyzeWithAI(text, apiKey);
+        };
+
+        async function analyzeWithAI(csvText, apiKey) {
+            const prompt = `你是一个可爱的账单管家。请分析以下账单原始文本，提取出：1.总支出金额 2.消费分类(如餐饮、交通、购物)及各分类金额 3.针对总额给出一句幽默有趣的吐槽。
+            要求返回JSON格式：{"total": 数字, "categories": {"分类名": 金额}, "comment": "吐槽语"}
+            以下是账单数据：${csvText.substring(0, 2000)}`; // 截取前2000字防止超长
+
+            try {
+                const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: "deepseek-chat",
+                        messages: [{role: "user", content: prompt}],
+                        response_format: { type: 'json_object' }
+                    })
+                });
+
+                const data = await response.json();
+                const res = JSON.parse(data.choices[0].message.content);
+                updateUI(res);
+            } catch (err) {
+                alert("AI 解析失败，请检查 Key 是否正确或网络是否通畅。");
+                console.error(err);
             }
         }
 
-        currentInput.addEventListener('input', updateUI);
-        limitInput.addEventListener('input', updateUI);
+        function updateUI(res) {
+            const limit = document.getElementById('budget-limit').value;
+            const totalAmount = document.getElementById('total-amount');
+            const aiStatus = document.getElementById('ai-status');
+            const aiComment = document.getElementById('ai-comment');
+            const categoryList = document.getElementById('category-list');
+            const body = document.getElementById('body-bg');
+
+            totalAmount.innerText = `￥${res.total.toFixed(2)}`;
+            aiComment.innerText = res.comment;
+            aiStatus.classList.remove('loading');
+
+            // 更新分类列表
+            categoryList.innerHTML = Object.entries(res.categories)
+                .map(([name, price]) => `<div class="flex justify-between p-2 bg-gray-50 rounded-lg"><span>${name}</span><b>￥${price}</b></div>`)
+                .join('');
+
+            // 阈值变色逻辑
+            if (res.total > limit) {
+                body.className = "bg-orange-50 flex h-screen";
+                aiStatus.innerText = "超支预警！🚨";
+                aiStatus.className = "px-4 py-2 rounded-full bg-orange-100 text-orange-600 font-bold";
+            } else {
+                body.className = "bg-blue-50 flex h-screen";
+                aiStatus.innerText = "预算安全 ✨";
+                aiStatus.className = "px-4 py-2 rounded-full bg-blue-100 text-blue-600 font-bold";
+            }
+        }
     </script>
 </body>
 </html>

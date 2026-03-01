@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>萌萌账单助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 这里的逻辑是：如果没有超过均值，就是蓝色调（bg-blue-50），超过了就是橘色调（bg-orange-50） */
+        .theme-blue { --main-color: #3b82f6; --bg-light: #eff6ff; }
+        .theme-orange { --main-color: #f97316; --bg-light: #fff7ed; }
+        body { transition: all 0.5s ease; font-family: 'Segoe UI', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 flex h-screen">
+
+    <aside class="w-64 bg-white shadow-lg flex flex-col p-6">
+        <h1 class="text-2xl font-bold mb-10 flex items-center gap-2">
+            <span>💰</span> 萌账助手
+        </h1>
+        <nav class="space-y-4">
+            <a href="#" class="block p-3 rounded-lg bg-blue-100 text-blue-600 font-bold">📊 月度概览</a>
+            <a href="#" class="block p-3 rounded-lg text-gray-500 hover:bg-gray-50">📑 账单导入</a>
+            <a href="#" class="block p-3 rounded-lg text-gray-500 hover:bg-gray-50">⚙️ 消费设置</a>
+        </nav>
+    </aside>
+
+    <main id="main-content" class="flex-1 p-10 overflow-y-auto bg-blue-50">
+        <header class="mb-10">
+            <h2 class="text-gray-500 mb-2">本月总支出</h2>
+            <div class="flex items-end gap-4">
+                <span id="total-amount" class="text-5xl font-black text-blue-600">￥0.00</span>
+                <span id="status-tag" class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium mb-2">预算内，真棒！</span>
+            </div>
+        </header>
+
+        <section class="bg-white p-6 rounded-2xl shadow-sm mb-10">
+            <h3 class="font-bold mb-4 text-gray-700">控制面板 (模拟测试)</h3>
+            <div class="flex gap-10">
+                <div>
+                    <label class="block text-sm text-gray-500">我的月度均值 (元)</label>
+                    <input type="number" id="limit-input" value="3000" class="border-b-2 border-gray-200 focus:border-blue-500 outline-none text-xl p-2">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-500">当前模拟支出 (元)</label>
+                    <input type="number" id="current-input" value="0" class="border-b-2 border-gray-200 focus:border-blue-500 outline-none text-xl p-2">
+                </div>
+            </div>
+        </section>
+
+        <div id="ai-bubble" class="bg-white p-4 rounded-2xl border-2 border-blue-400 relative mb-10">
+            <p class="text-lg">🤖 AI 助手说：<span id="ai-text">欢迎回来！快把账单丢给我分析吧～</span></p>
+        </div>
+    </main>
+
+    <script>
+        const limitInput = document.getElementById('limit-input');
+        const currentInput = document.getElementById('current-input');
+        const totalAmount = document.getElementById('total-amount');
+        const mainContent = document.getElementById('main-content');
+        const statusTag = document.getElementById('status-tag');
+        const aiText = document.getElementById('ai-text');
+
+        const badComments = [
+            "你的钱包正在哭泣，真的不打算停手吗？😭",
+            "警报！检测到碎钞机正在运行，请立刻撤离商场！🚨",
+            "再买就要吃土了，这土可不一定是蓝莓味的哦～🍨"
+        ];
+
+        function updateUI() {
+            const limit = parseFloat(limitInput.value);
+            const current = parseFloat(currentInput.value);
+            totalAmount.innerText = `￥${current.toFixed(2)}`;
+
+            if (current > limit) {
+                // 切换为橘色警告风格
+                mainContent.classList.replace('bg-blue-50', 'bg-orange-50');
+                totalAmount.classList.replace('text-blue-600', 'text-orange-600');
+                statusTag.innerText = "超过均值了！";
+                statusTag.classList.replace('bg-blue-100', 'bg-orange-100');
+                statusTag.classList.replace('text-blue-600', 'text-orange-600');
+                aiText.innerText = badComments[Math.floor(Math.random() * badComments.length)];
+            } else {
+                // 保持蓝色简约风格
+                mainContent.classList.replace('bg-orange-50', 'bg-blue-50');
+                totalAmount.classList.replace('text-orange-600', 'text-blue-600');
+                statusTag.innerText = "预算内，真棒！";
+                statusTag.classList.replace('bg-orange-100', 'bg-blue-100');
+                statusTag.classList.replace('text-orange-600', 'text-blue-600');
+                aiText.innerText = "状态良好，继续保持这份理智！✨";
+            }
+        }
+
+        currentInput.addEventListener('input', updateUI);
+        limitInput.addEventListener('input', updateUI);
+    </script>
+</body>
+</html>
